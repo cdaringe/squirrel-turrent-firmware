@@ -16,7 +16,10 @@ use {
     },
 };
 
-use gimbal_motion::{cmd::Cmd, gimbal_pins::GimbalBuilder, uart_writer::UartWriter};
+use {
+    esp_idf_svc::io::{Read, ReadReady},
+    gimbal_motion::{cmd::Cmd, gimbal_pins::GimbalBuilder, uart_writer::UartWriter},
+};
 
 use gimbal_motion::{
     gimbal::Gimbal,
@@ -54,57 +57,71 @@ fn main() -> anyhow::Result<()> {
     motor_conf_gconf.set_pdn_disable(true);
     let vactual = tmc2209::reg::VACTUAL::default();
 
-    let motor_driver = Arc::new(Mutex::new(
-        uart::UartDriver::new(
-            peripherals.uart2,
-            pins.gpio17,
-            pins.gpio16,
-            AnyIOPin::none(),
-            AnyIOPin::none(),
-            &uart::config::Config::new().baudrate(115200.into()),
-        )
-        .unwrap(),
-    ));
-    let mut xxx = Arc::clone(&motor_driver);
-    let mut bullshit = xxx.lock().unwrap();
-    let (mtx, mrx) = bullshit.borrow_mut().split();
-    let _ = {
-        let mrx_reader = std::thread::spawn(move || {
-            let mut tmc_reader = tmc2209::Reader::default();
-            let mut buf = [0u8; 256];
-            while let Ok(b) = mrx.read(&mut buf, 10000) {
-                if let (_, Some(response)) = tmc_reader.read_response(&[b.try_into().unwrap()]) {
-                    match response.crc_is_valid() {
-                        true => log::info!("Received valid response!"),
-                        false => {
-                            log::error!("Received invalid response!");
-                            continue;
-                        }
-                    }
-                    match response.reg_addr() {
-                        Ok(tmc2209::reg::Address::IOIN) => {
-                            let reg = response.register::<tmc2209::reg::IOIN>().unwrap();
-                            log::info!("{:?}", reg);
-                        }
-                        Ok(tmc2209::reg::Address::IFCNT) => {
-                            let reg = response.register::<tmc2209::reg::IFCNT>().unwrap();
-                            log::info!("{:?}", reg);
-                        }
-                        addr => log::warn!("Unexpected register address: {:?}", addr),
-                    }
-                }
-            }
-        });
+    let mut motor_driver = uart::AsyncUartDriver::new(
+        peripherals.uart2,
+        pins.gpio17,
+        pins.gpio16,
+        AnyIOPin::none(),
+        AnyIOPin::none(),
+        &uart::config::Config::new().baudrate(115200.into()),
+    )
+    .unwrap();
 
-        let mtx_writer = std::thread::spawn(move || {
-            let mut wmtx = UartWriter::new(mtx);
+    let (mtx, mrx) = motor_driver.split();
+
+    let writer_task = async {
+        log::info!("Starting motor writer thread");
+
+        let mut wmtx = UartWriter::new(mtx);
+
+        loop {
             tmc2209::send_write_request(0, motor_conf_gconf, &mut wmtx).unwrap();
             tmc2209::send_write_request(0, vactual, &mut wmtx).unwrap();
-        });
-
-        mrx_reader.join().unwrap();
-        mtx_writer.join().unwrap();
+            std::thread::sleep(std::time::Duration::from_secs(5));
+            log::info!("sleeping, man");
+        }
     };
+
+    let reader_task = async {
+        log::info!("Starting motor reader thread");
+        let mut tmc_reader = tmc2209::Reader::default();
+        let mut buf = [0u8; 256];
+
+        loop {
+            match mrx.read(&mut buf).await {
+                Ok(b) => {
+                    if let (_, Some(response)) = tmc_reader.read_response(&[b.try_into().unwrap()])
+                    {
+                        match response.crc_is_valid() {
+                            true => log::info!("Received valid response!"),
+                            false => {
+                                log::error!("Received invalid response!");
+                                continue;
+                            }
+                        }
+                        log::debug!("{:?}", response.reg_state());
+
+                        match response.reg_addr() {
+                            Ok(tmc2209::reg::Address::IOIN) => {
+                                let reg = response.register::<tmc2209::reg::IOIN>().unwrap();
+                                log::info!("{:?}", reg);
+                            }
+                            Ok(tmc2209::reg::Address::IFCNT) => {
+                                let reg = response.register::<tmc2209::reg::IFCNT>().unwrap();
+                                log::info!("{:?}", reg);
+                            }
+                            addr => log::warn!("Unexpected register address: {:?}", addr),
+                        }
+                    }
+                }
+                Err(e) => log::error!("Error reading from motor: {:?}", e),
+            }
+        }
+    };
+
+    let sel = embassy_futures::join::join(reader_task, writer_task);
+    embassy_futures::block_on(sel);
+    log::info!("i guess the motors are done talking forever.");
 
     let gimbal_pins = GimbalBuilder::pan_dir(pins.gpio14.downgrade_output().into())
         .pan_step(pins.gpio15.downgrade_output().into())

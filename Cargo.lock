@@ -881,6 +881,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "derive_more",
+ "embassy-futures",
  "embedded-hal 0.2.7",
  "embedded-svc",
  "embuild",

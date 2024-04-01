@@ -38,6 +38,7 @@ gcode = "0.6.1"
 url = "2.5.0"
 tmc2209 = "0.2.2"
 embedded-hal = "*"
+embassy-futures = "*"
 
 [patch.crates-io]
 embedded-svc = { git = "https://github.com/esp-rs/embedded-svc.git", branch = "master" }
