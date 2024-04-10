@@ -27,7 +27,7 @@ embassy = ["esp-idf-svc/embassy-sync", "esp-idf-svc/critical-section", "esp-idf-
 log = { version = "0.4", default-features = false }
 libm = "0.2.8"
 esp-idf-svc = { git = "https://github.com/esp-rs/esp-idf-svc.git", branch = "master", default-features = false }
-anyhow = { version = "1.0.79", features = ["backtrace"] }
+anyhow = { version = "1.0.82", features = ["backtrace"] }
 embedded-svc = { git = "https://github.com/esp-rs/embedded-svc.git", branch = "master", default-features = false }
 futures = "0.3.30"
 derive_more = "0.99.17"
