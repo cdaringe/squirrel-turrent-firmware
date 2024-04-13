@@ -17,7 +17,7 @@ use {
 };
 
 use {
-    esp_idf_svc::io::{Read, ReadReady},
+    esp_idf_svc::io::Read,
     gimbal_motion::{cmd::Cmd, gimbal_pins::GimbalBuilder, uart_writer::UartWriter},
 };
 
@@ -58,7 +58,7 @@ fn main() -> anyhow::Result<()> {
     let vactual = tmc2209::reg::VACTUAL::default();
 
     let mut motor_driver = uart::AsyncUartDriver::new(
-        peripherals.uart2,
+        peripherals.uart1,
         pins.gpio17,
         pins.gpio16,
         AnyIOPin::none(),
@@ -78,7 +78,7 @@ fn main() -> anyhow::Result<()> {
             tmc2209::send_write_request(0, motor_conf_gconf, &mut wmtx).unwrap();
             tmc2209::send_write_request(0, vactual, &mut wmtx).unwrap();
             std::thread::sleep(std::time::Duration::from_secs(5));
-            log::info!("sleeping, man");
+            log::info!("[writer] sleeping, man");
         }
     };
 

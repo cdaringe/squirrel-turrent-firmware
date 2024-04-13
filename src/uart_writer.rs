@@ -1,7 +1,7 @@
 // use {embedded_hal::blocking::serial::Write, esp32_hal::uart::Uart};
 
 use esp_idf_svc::{
-    hal::{task::block_on, uart},
+    hal::{uart},
     io::Write,
     sys::EspError,
 };
