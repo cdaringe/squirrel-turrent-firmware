@@ -8,7 +8,7 @@ use {
         hal::modem::Modem,
         nvs::EspDefaultNvsPartition,
         timer::EspTaskTimerService,
-        wifi::{AsyncWifi, EspWifi},
+        wifi::{AsyncWifi, EspWifi, PmfConfiguration, ScanMethod},
     },
     heapless::String,
 };
@@ -42,6 +42,8 @@ pub async fn connect_wifi(
         auth_method: AuthMethod::WPA2Personal,
         password: spassword,
         channel: None,
+        pmf_cfg: PmfConfiguration::NotCapable,
+        scan_method: ScanMethod::default(),
     });
 
     wifi.set_configuration(&wifi_configuration)?;

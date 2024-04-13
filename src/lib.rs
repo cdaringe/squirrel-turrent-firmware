@@ -1,4 +1,5 @@
 pub mod cmd;
+pub mod error;
 pub mod gcode;
 pub mod gimbal;
 pub mod gimbal_pins;
@@ -6,5 +7,5 @@ pub mod motor;
 pub mod mv;
 pub mod server;
 pub mod server_response;
-pub mod uart_writer;
+// pub mod uart_writer;
 pub mod wifi;

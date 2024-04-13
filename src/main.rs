@@ -17,8 +17,8 @@ use {
 };
 
 use {
-    esp_idf_svc::io::Read,
-    gimbal_motion::{cmd::Cmd, gimbal_pins::GimbalBuilder, uart_writer::UartWriter},
+    esp_idf_svc::hal::delay::TickType,
+    gimbal_motion::{cmd::Cmd, gimbal_pins::GimbalBuilder},
 };
 
 use gimbal_motion::{
@@ -30,9 +30,6 @@ use gimbal_motion::{
 const SSID: &str = env!("WIFI_SSID");
 const PASSWORD: &str = env!("WIFI_PASS");
 
-/*
- * https://github.com/Rahix/avr-hal/tree/main/examples
- */
 const DRIVE_TEETH: u16 = 16;
 const TILT_TEETH: u16 = 160;
 const PAN_TEETH: u16 = 128;
@@ -57,26 +54,24 @@ fn main() -> anyhow::Result<()> {
     motor_conf_gconf.set_pdn_disable(true);
     let vactual = tmc2209::reg::VACTUAL::default();
 
-    let mut motor_driver = uart::AsyncUartDriver::new(
+    let mut motor_driver = uart::UartDriver::new(
         peripherals.uart1,
         pins.gpio17,
-        pins.gpio16,
+        pins.gpio18,
         AnyIOPin::none(),
         AnyIOPin::none(),
         &uart::config::Config::new().baudrate(115200.into()),
     )
     .unwrap();
 
-    let (mtx, mrx) = motor_driver.split();
+    let (mut mtx, mrx) = motor_driver.split();
 
     let writer_task = async {
         log::info!("Starting motor writer thread");
 
-        let mut wmtx = UartWriter::new(mtx);
-
         loop {
-            tmc2209::send_write_request(0, motor_conf_gconf, &mut wmtx).unwrap();
-            tmc2209::send_write_request(0, vactual, &mut wmtx).unwrap();
+            tmc2209::send_write_request(0, motor_conf_gconf, &mut mtx).unwrap();
+            tmc2209::send_write_request(0, vactual, &mut mtx).unwrap();
             std::thread::sleep(std::time::Duration::from_secs(5));
             log::info!("[writer] sleeping, man");
         }
@@ -88,7 +83,7 @@ fn main() -> anyhow::Result<()> {
         let mut buf = [0u8; 256];
 
         loop {
-            match mrx.read(&mut buf).await {
+            match mrx.read(&mut buf, TickType::new_millis(5).into()) {
                 Ok(b) => {
                     if let (_, Some(response)) = tmc_reader.read_response(&[b.try_into().unwrap()])
                     {
@@ -125,10 +120,10 @@ fn main() -> anyhow::Result<()> {
 
     let gimbal_pins = GimbalBuilder::pan_dir(pins.gpio14.downgrade_output().into())
         .pan_step(pins.gpio15.downgrade_output().into())
-        .tilt_dir(pins.gpio22.downgrade_output().into())
-        .tilt_step(pins.gpio21.downgrade_output().into())
-        .pan_endstop(pins.gpio25.downgrade().into())
-        .tilt_endstop(pins.gpio26.downgrade().into());
+        .tilt_dir(pins.gpio21.downgrade_output().into())
+        .tilt_step(pins.gpio26.downgrade_output().into())
+        .pan_endstop(pins.gpio30.downgrade().into())
+        .tilt_endstop(pins.gpio31.downgrade().into());
 
     let cmds_arc: Arc<Mutex<VecDeque<Cmd>>> = Arc::new(Mutex::new(VecDeque::new()));
     let cmds_reader = cmds_arc.clone();

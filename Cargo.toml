@@ -24,21 +24,22 @@ experimental = ["esp-idf-svc/experimental"]
 embassy = ["esp-idf-svc/embassy-sync", "esp-idf-svc/critical-section", "esp-idf-svc/embassy-time-driver"]
 
 [dependencies]
-log = { version = "0.4", default-features = false }
-libm = "0.2.8"
-esp-idf-svc = { git = "https://github.com/esp-rs/esp-idf-svc.git", branch = "master", default-features = false }
 anyhow = { version = "1.0.79", features = ["backtrace"] }
-embedded-svc = { git = "https://github.com/esp-rs/embedded-svc.git", branch = "master", default-features = false }
-futures = "0.3.30"
 derive_more = "0.99.17"
+embassy-futures = "*"
+embedded-hal = "*"
+embedded-io = "*"
+embedded-svc = { git = "https://github.com/esp-rs/embedded-svc.git", branch = "master", default-features = false }
+esp-idf-svc = { git = "https://github.com/esp-rs/esp-idf-svc.git", branch = "master", default-features = false }
+futures = "0.3.30"
+heapless = "0.8.0"
+libm = "0.2.8"
+log = { version = "0.4", default-features = false }
 serde = "1.0.195"
 serde_json = "1.0.111"
-heapless = "0.8.0"
-gcode = "0.6.1"
+tmc2209 = { path="../tmc2209/tmc2209" }
+thiserror = "*"
 url = "2.5.0"
-tmc2209 = "0.2.2"
-embedded-hal = "*"
-embassy-futures = "*"
 
 [patch.crates-io]
 embedded-svc = { git = "https://github.com/esp-rs/embedded-svc.git", branch = "master" }
