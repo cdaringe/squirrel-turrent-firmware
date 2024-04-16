@@ -32,7 +32,7 @@ embedded-svc = { git = "https://github.com/esp-rs/embedded-svc.git", branch = "m
 futures = "0.3.30"
 derive_more = "0.99.17"
 serde = "1.0.195"
-serde_json = "1.0.111"
+serde_json = "1.0.116"
 heapless = "0.8.0"
 gcode = "0.6.1"
 url = "2.5.0"
