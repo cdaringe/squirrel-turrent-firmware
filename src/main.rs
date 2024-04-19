@@ -1,3 +1,4 @@
+use embassy_time::Duration;
 // use embassy_time::Duration;
 use esp_idf_svc::hal::gpio::AnyIOPin;
 
@@ -16,14 +17,14 @@ const TILT_TEETH: u16 = 160;
 const PAN_TEETH: u16 = 128;
 
 pub struct TmcRegisters {
-    gconf: tmc2209::reg::GCONF,
-    vactual: tmc2209::reg::VACTUAL,
+    // gconf: tmc2209::reg::GCONF,
+    // vactual: tmc2209::reg::VACTUAL,
 }
 
 #[embassy_executor::task]
 async fn my_task() {
     loop {
-        // embassy_time::Timer::after(Duration::from_secs(5)).await;
+        embassy_time::Timer::after(Duration::from_secs(5)).await;
         log::info!("Woke up after 5 seconds");
     }
 }
@@ -46,12 +47,12 @@ fn main() -> anyhow::Result<()> {
     let peripherals = Peripherals::take()?;
     let pins = peripherals.pins;
 
-    let _motor_conf_coolconf = tmc2209::reg::COOLCONF::default();
-    let mut motor_conf_gconf = tmc2209::reg::GCONF::default();
-    let _interface_access_counter = tmc2209::reg::IFCNT::default();
-    motor_conf_gconf.set_shaft(true); // spin motor.
-    motor_conf_gconf.set_pdn_disable(true);
-    let _vactual = tmc2209::reg::VACTUAL::default();
+    // let _motor_conf_coolconf = tmc2209::reg::COOLCONF::default();
+    // let mut motor_conf_gconf = tmc2209::reg::GCONF::default();
+    // let _interface_access_counter = tmc2209::reg::IFCNT::default();
+    // motor_conf_gconf.set_shaft(true); // spin motor.
+    // motor_conf_gconf.set_pdn_disable(true);
+    // let _vactual = tmc2209::reg::VACTUAL::default();
 
     let mut motor_driver = uart::AsyncUartDriver::new(
         peripherals.uart1,
