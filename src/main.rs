@@ -1,14 +1,12 @@
-
-
+// use embassy_time::Duration;
 use esp_idf_svc::hal::gpio::AnyIOPin;
 
 use esp_idf_svc::hal::peripherals::Peripherals;
 use esp_idf_svc::hal::sys;
+use esp_idf_svc::io::asynch::Write;
 
 use esp_idf_svc::hal::uart;
 use esp_idf_svc::log::EspLogger;
-
-use esp_idf_svc::io::asynch::Write;
 
 const SSID: &str = env!("WIFI_SSID");
 const PASSWORD: &str = env!("WIFI_PASS");
@@ -22,12 +20,29 @@ pub struct TmcRegisters {
     vactual: tmc2209::reg::VACTUAL,
 }
 
+#[embassy_executor::task]
+async fn my_task() {
+    loop {
+        // embassy_time::Timer::after(Duration::from_secs(5)).await;
+        log::info!("Woke up after 5 seconds");
+    }
+}
+
 fn main() -> anyhow::Result<()> {
-    // It is necessary to call this function once. Otherwise some patches to the runtime
-    // implemented by esp-idf-sys might not link properly. See https://github.com/esp-rs/esp-idf-template/issues/71
+    // @warn. See https://github.com/esp-rs/esp-idf-template/issues/71
     sys::link_patches();
     EspLogger::initialize_default();
 
+    // setup embassy
+    let mut ctx = ();
+    let executor = Box::new(embassy_executor::raw::Executor::new(&mut ctx));
+    // This is silly. I just don't know man.
+    let executor_ptr = Box::into_raw(executor);
+    unsafe {
+        (*executor_ptr).spawner().spawn(my_task()).unwrap();
+    };
+
+    // setup peripherals
     let peripherals = Peripherals::take()?;
     let pins = peripherals.pins;
 
@@ -60,32 +75,45 @@ fn main() -> anyhow::Result<()> {
     //     embassy_futures::block_on(work);
     //     std::thread::sleep(std::time::Duration::from_secs(5));
     // }
+
     let (mut mtx, mrx) = motor_driver.split();
 
     let writer_task = async {
         log::info!("Starting motor writer thread");
         loop {
             mtx.write_all("hello".as_bytes()).await.unwrap();
+            log::info!("wrote hello");
+            // embassy_time::Timer::after_millis(5000).await;
             // tmc2209::send_write_request_async(0, motor_conf_gconf, &mut mtx)
             //     .await
             //     .unwrap();
             // tmc2209::send_write_request_async(0, vactual, &mut mtx)
             //     .await
             //     .unwrap();
-            tmc2209::send_read_request_async::<tmc2209::reg::IFCNT, _>(9, &mut mtx)
-                .await
-                .unwrap();
+            // tmc2209::send_read_request_async::<tmc2209::reg::IFCNT, _>(9, &mut mtx)
+            //     .await
+            //     .unwrap();
         }
     };
 
     let reader_task = async {
         log::info!("Starting motor reader thread");
-        let _tmc_reader = tmc2209::Reader::default();
+        // let _tmc_reader = tmc2209::Reader::default();
 
         loop {
             let mut buf = [0u8; 256];
-            mrx.read(&mut buf).await.unwrap();
-            println!("read buf: {}", &String::from_utf8(buf.to_vec()).unwrap());
+            let num_bytes = mrx.read(&mut buf).await.unwrap();
+            let foo = &buf[0..num_bytes];
+            match std::str::from_utf8(foo) {
+                Ok(s) => {
+                    println!("read buf: {}", s);
+                }
+                Err(e) => {
+                    println!("err: {:?} {:?}", e, buf);
+                }
+            }
+            log::info!("read that buffer!");
+            // println!("read buf: {}", foo_str);
             // match mrx.read(&mut buf).await {
             //     Ok(b) => {
             //         log::info!("read buf: {}", &String::from_utf8(buf.to_vec()).unwrap());
