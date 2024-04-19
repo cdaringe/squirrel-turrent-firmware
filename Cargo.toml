@@ -26,6 +26,8 @@ embassy = ["esp-idf-svc/embassy-sync", "esp-idf-svc/critical-section", "esp-idf-
 [dependencies]
 anyhow = { version = "1.0.79", features = ["backtrace"] }
 derive_more = "0.99.17"
+embassy-executor = "*"
+embassy-time = "*"
 embassy-futures = "*"
 embedded-hal = "*"
 embedded-io = "*"

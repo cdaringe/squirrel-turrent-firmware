@@ -1,24 +1,24 @@
-use {
-    serde::Serialize,
-    std::{
-        num::NonZeroU32,
-        sync::{Arc, Mutex},
-    },
-};
+use serde::Serialize;
+use std::num::NonZeroU32;
+use std::sync::Arc;
+use std::sync::Mutex;
 
-use {anyhow::anyhow, libm::floorf};
+use anyhow::anyhow;
+use libm::floorf;
 
 use derive_more::Display;
 
 use log::info;
 
-use esp_idf_svc::hal::{
-    delay::Delay,
-    gpio::{Level, Pull},
-    task::notification::Notification,
-};
+use esp_idf_svc::hal::delay::Delay;
+use esp_idf_svc::hal::gpio::Level;
+use esp_idf_svc::hal::gpio::Pull;
+use esp_idf_svc::hal::task::notification::Notification;
 
-use crate::{gcode::Gcode, gimbal_pins::GimbalPins, motor::steps_per_degree, mv::Move};
+use crate::gcode::Gcode;
+use crate::gimbal_pins::GimbalPins;
+use crate::motor::steps_per_degree;
+use crate::mv::Move;
 
 #[derive(Copy, Clone, Debug, Display)]
 pub enum Axis {

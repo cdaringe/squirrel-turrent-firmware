@@ -1,19 +1,18 @@
-use {
-    crate::{
-        cmd::Cmd, error::ServerError, gcode::GcodeParser, gimbal::Gimbal, server_response::Response,
-    },
-    embedded_svc::{http::Headers, io::Write, ipv4::IpInfo},
-    esp_idf_svc::{
-        http::{server::EspHttpServer, Method},
-        io::EspIOError,
-    },
-    log::info,
-    serde_json,
-    std::{
-        collections::VecDeque,
-        sync::{Arc, Mutex},
-    },
-};
+use crate::cmd::Cmd;
+use crate::error::ServerError;
+use crate::gcode::GcodeParser;
+use crate::gimbal::Gimbal;
+use crate::server_response::Response;
+use embedded_svc::http::Headers;
+use embedded_svc::io::Write;
+use embedded_svc::ipv4::IpInfo;
+use esp_idf_svc::http::server::EspHttpServer;
+use esp_idf_svc::http::Method;
+use log::info;
+use serde_json;
+use std::collections::VecDeque;
+use std::sync::Arc;
+use std::sync::Mutex;
 
 #[derive(serde::Deserialize, serde::Serialize)]
 struct PostGcode {

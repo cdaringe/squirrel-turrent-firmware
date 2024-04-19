@@ -1,4 +1,8 @@
-use esp_idf_svc::hal::gpio::{AnyIOPin, AnyOutputPin, Input, Output, PinDriver};
+use esp_idf_svc::hal::gpio::AnyIOPin;
+use esp_idf_svc::hal::gpio::AnyOutputPin;
+use esp_idf_svc::hal::gpio::Input;
+use esp_idf_svc::hal::gpio::Output;
+use esp_idf_svc::hal::gpio::PinDriver;
 
 pub struct GimbalPins {
     pub pan_dir: OutPin,

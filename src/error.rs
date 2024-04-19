@@ -1,4 +1,5 @@
-use {esp_idf_svc::io::EspIOError, thiserror::Error};
+use esp_idf_svc::io::EspIOError;
+use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum ServerError {

@@ -1,17 +1,16 @@
-use {
-    embedded_svc::{
-        ipv4::IpInfo,
-        wifi::{AuthMethod, ClientConfiguration, Configuration},
-    },
-    esp_idf_svc::{
-        eventloop::EspSystemEventLoop,
-        hal::modem::Modem,
-        nvs::EspDefaultNvsPartition,
-        timer::EspTaskTimerService,
-        wifi::{AsyncWifi, EspWifi, PmfConfiguration, ScanMethod},
-    },
-    heapless::String,
-};
+use embedded_svc::ipv4::IpInfo;
+use embedded_svc::wifi::AuthMethod;
+use embedded_svc::wifi::ClientConfiguration;
+use embedded_svc::wifi::Configuration;
+use esp_idf_svc::eventloop::EspSystemEventLoop;
+use esp_idf_svc::hal::modem::Modem;
+use esp_idf_svc::nvs::EspDefaultNvsPartition;
+use esp_idf_svc::timer::EspTaskTimerService;
+use esp_idf_svc::wifi::AsyncWifi;
+use esp_idf_svc::wifi::EspWifi;
+use esp_idf_svc::wifi::PmfConfiguration;
+use esp_idf_svc::wifi::ScanMethod;
+use heapless::String;
 
 use log::info;
 pub fn create_wifi(modem: Modem) -> anyhow::Result<AsyncWifi<EspWifi<'static>>> {
