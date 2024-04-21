@@ -1,13 +1,16 @@
-use embassy_time::Duration;
-// use embassy_time::Duration;
+use async_executor::Executor;
 use esp_idf_svc::hal::gpio::AnyIOPin;
-
 use esp_idf_svc::hal::peripherals::Peripherals;
 use esp_idf_svc::hal::sys;
-use esp_idf_svc::io::asynch::Write;
 
-use esp_idf_svc::hal::uart;
+use esp_idf_svc::hal::uart::config::Config;
+use esp_idf_svc::hal::uart::AsyncUartDriver;
+use esp_idf_svc::hal::uart::UartDriver;
+use esp_idf_svc::io::asynch::Write;
 use esp_idf_svc::log::EspLogger;
+use futures_lite::future;
+use gimbal_motion::timing::sleep_ms;
+use gimbal_motion::unsafe_send::UnsafeSendFut;
 
 const SSID: &str = env!("WIFI_SSID");
 const PASSWORD: &str = env!("WIFI_PASS");
@@ -21,27 +24,14 @@ pub struct TmcRegisters {
     // vactual: tmc2209::reg::VACTUAL,
 }
 
-#[embassy_executor::task]
-async fn my_task() {
-    loop {
-        embassy_time::Timer::after(Duration::from_secs(5)).await;
-        log::info!("Woke up after 5 seconds");
-    }
-}
+type StaticDriver = AsyncUartDriver<'static, UartDriver<'static>>;
 
 fn main() -> anyhow::Result<()> {
     // @warn. See https://github.com/esp-rs/esp-idf-template/issues/71
     sys::link_patches();
     EspLogger::initialize_default();
 
-    // setup embassy
-    let mut ctx = ();
-    let executor = Box::new(embassy_executor::raw::Executor::new(&mut ctx));
-    // This is silly. I just don't know man.
-    let executor_ptr = Box::into_raw(executor);
-    unsafe {
-        (*executor_ptr).spawner().spawn(my_task()).unwrap();
-    };
+    let executor = Executor::new();
 
     // setup peripherals
     let peripherals = Peripherals::take()?;
@@ -54,102 +44,55 @@ fn main() -> anyhow::Result<()> {
     // motor_conf_gconf.set_pdn_disable(true);
     // let _vactual = tmc2209::reg::VACTUAL::default();
 
-    let mut motor_driver = uart::AsyncUartDriver::new(
-        peripherals.uart1,
-        pins.gpio17,
-        pins.gpio18,
-        AnyIOPin::none(),
-        AnyIOPin::none(),
-        &uart::config::Config::new().baudrate(9600.into()),
-    )
-    .unwrap();
-
-    // loop {
-    //     log::info!("starting loop");
-    //     let work = async {
-    //         log::info!("-> hello");
-    //         motor_driver.write_all("hello".as_bytes()).await.unwrap();
-    //         let mut buf = [0u8; 256];
-    //         motor_driver.read(&mut buf).await.unwrap();
-    //         log::info!("<- {}", &String::from_utf8(buf.to_vec()).unwrap());
-    //     };
-    //     embassy_futures::block_on(work);
-    //     std::thread::sleep(std::time::Duration::from_secs(5));
-    // }
+    let motor_driver: &'static mut StaticDriver = Box::leak(Box::new(
+        AsyncUartDriver::new(
+            peripherals.uart1,
+            pins.gpio17,
+            pins.gpio18,
+            AnyIOPin::none(),
+            AnyIOPin::none(),
+            &Config::new().baudrate(115200.into()),
+        )
+        .unwrap(),
+    ));
 
     let (mut mtx, mrx) = motor_driver.split();
 
-    let writer_task = async {
-        log::info!("Starting motor writer thread");
-        loop {
-            mtx.write_all("hello".as_bytes()).await.unwrap();
-            log::info!("wrote hello");
-            // embassy_time::Timer::after_millis(5000).await;
-            // tmc2209::send_write_request_async(0, motor_conf_gconf, &mut mtx)
-            //     .await
-            //     .unwrap();
-            // tmc2209::send_write_request_async(0, vactual, &mut mtx)
-            //     .await
-            //     .unwrap();
-            // tmc2209::send_read_request_async::<tmc2209::reg::IFCNT, _>(9, &mut mtx)
-            //     .await
-            //     .unwrap();
-        }
-    };
-
-    let reader_task = async {
-        log::info!("Starting motor reader thread");
-        // let _tmc_reader = tmc2209::Reader::default();
-
-        loop {
-            let mut buf = [0u8; 256];
-            let num_bytes = mrx.read(&mut buf).await.unwrap();
-            let foo = &buf[0..num_bytes];
-            match std::str::from_utf8(foo) {
-                Ok(s) => {
-                    println!("read buf: {}", s);
-                }
-                Err(e) => {
-                    println!("err: {:?} {:?}", e, buf);
-                }
+    future::block_on(executor.run({
+        let writer_task = async move {
+            log::info!("Starting motor writer thread");
+            loop {
+                let msg = "hello\0".as_bytes();
+                mtx.write(msg).await.unwrap();
+                mtx.flush().await.unwrap();
+                log::info!("wrote hello");
+                sleep_ms(5000).await;
             }
-            log::info!("read that buffer!");
-            // println!("read buf: {}", foo_str);
-            // match mrx.read(&mut buf).await {
-            //     Ok(b) => {
-            //         log::info!("read buf: {}", &String::from_utf8(buf.to_vec()).unwrap());
-            //         if let (_, Some(response)) = tmc_reader.read_response(&[b.try_into().unwrap()])
-            //         {
-            //             match response.crc_is_valid() {
-            //                 true => log::info!("Received valid response!"),
-            //                 false => {
-            //                     log::error!("Received invalid response!");
-            //                     continue;
-            //                 }
-            //             }
-            //             log::debug!("{:?}", response.reg_state());
+        };
 
-            //             match response.reg_addr() {
-            //                 Ok(tmc2209::reg::Address::IOIN) => {
-            //                     let reg = response.register::<tmc2209::reg::IOIN>().unwrap();
-            //                     log::info!("{:?}", reg);
-            //                 }
-            //                 Ok(tmc2209::reg::Address::IFCNT) => {
-            //                     let reg = response.register::<tmc2209::reg::IFCNT>().unwrap();
-            //                     log::info!("{:?}", reg);
-            //                 }
-            //                 addr => log::warn!("Unexpected register address: {:?}", addr),
-            //             }
-            //         }
-            //     }
-            //     Err(e) => log::error!("Error reading from motor: {:?}", e),
-            // }
-        }
-    };
+        let reader_task = async move {
+            log::info!("Starting motor reader thread");
+            loop {
+                let mut buf = [0u8; 16];
+                match mrx.read(&mut buf).await {
+                    Ok(num_bytes) => match std::str::from_utf8(&buf[0..num_bytes]) {
+                        Ok(s) => log::info!("read buf: {}", s),
+                        Err(e) => {
+                            log::info!("err: {:?} {:?}", e, buf);
+                            panic!("kaboom");
+                        }
+                    },
+                    Err(e) => log::error!("failed to read: {:?}", e),
+                }
+                sleep_ms(100).await;
+            }
+        };
 
-    let sel = embassy_futures::join::join(reader_task, writer_task);
-    embassy_futures::block_on(sel);
-    log::info!("i guess the motors are done talking forever.");
+        future::or(
+            executor.spawn(UnsafeSendFut::new(writer_task)),
+            executor.spawn(UnsafeSendFut::new(reader_task)),
+        )
+    }));
 
     // let gimbal_pins = GimbalBuilder::pan_dir(pins.gpio14.downgrade_output().into())
     //     .pan_step(pins.gpio15.downgrade_output().into())
