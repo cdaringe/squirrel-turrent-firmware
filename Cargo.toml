@@ -24,7 +24,7 @@ experimental = ["esp-idf-svc/experimental"]
 embassy = ["esp-idf-svc/embassy-sync", "esp-idf-svc/critical-section", "esp-idf-svc/embassy-time-driver"]
 
 [dependencies]
-log = { version = "0.4", default-features = false }
+log = { version = "0.4.21", default-features = false }
 libm = "0.2.8"
 esp-idf-svc = { git = "https://github.com/esp-rs/esp-idf-svc.git", branch = "master", default-features = false }
 anyhow = { version = "1.0.79", features = ["backtrace"] }
