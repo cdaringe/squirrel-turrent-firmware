@@ -42,4 +42,4 @@ embedded-svc = { git = "https://github.com/esp-rs/embedded-svc.git", branch = "m
 esp-idf-sys = { git = "https://github.com/esp-rs/esp-idf-sys.git", branch = "master" }
 
 [build-dependencies]
-embuild = "0.31.3"
+embuild = "0.32.0"
